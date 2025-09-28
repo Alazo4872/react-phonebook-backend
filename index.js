@@ -1,13 +1,9 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
-var morgan = require('morgan')
-const cors = require('cors')
-morgan.token('body', (req) => JSON.stringify(req.body))
+const Phonebook = require('./models/phonebook')
 app.use(express.json())
 app.use(express.static('dist'))
-app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
-
-app.use(cors())
 
 const unknownEndpoint = (request, response) => {
   response.status(404).send({ error: 'unknown endpoint' })
@@ -38,10 +34,11 @@ let persons = [
 ]
 
 app.get('/api/persons', (request, response) => {
-    response.json(persons)
+    Phonebook.find({}).then(persons =>{
+        response.json(persons)
+    })
 })
 
-console.log("hola")
 
 app.get('/info', (request, response) => {
     const time = Date();
@@ -60,24 +57,20 @@ app.post('/api/persons', (request, response) => {
         return response.status(400).json({error: 'name already exists'})
     }
     
-    const person = {
-        "id" : Math.floor(Math.random() * 1000000).toString(),
+    const person = new Phonebook ({
         "name" : body.name,
         "number": body.number
-    }
-    persons = persons.concat(person)
-    response.json(person)
+    })
+    person.save().then(savedPerson => {
+        response.json(savedPerson)
+
+    })
 })
 
 app.get('/api/persons/:id', (request, response) => {
-    const id = request.params.id
-    const person = persons.find(p => p.id === id)
-    if(person){
+    Phonebook.findById(request.params.id).then(person => {
         response.json(person)
-    }
-    else{
-        response.status(404).end()
-    }
+    })
 })
 app.delete('/api/persons/:id', (request, response) => {
     const id = request.params.id
